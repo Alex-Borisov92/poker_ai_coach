@@ -1,0 +1,15 @@
+{
+  "name": "poker_ai_coach",
+  "version": "1.0.0",
+  "description": "Local post-session poker AI coach for a microstakes MTT player.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

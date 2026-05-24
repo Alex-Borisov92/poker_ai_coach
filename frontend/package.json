@@ -1,0 +1,26 @@
+{
+  "name": "poker-ai-coach-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "check": "tsc -b",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.4.5",
+    "vite": "^6.4.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.0",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22"
+  }
+}
