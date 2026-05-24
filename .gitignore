@@ -20,9 +20,9 @@ coverage/
 *.sqlite
 *.sqlite3
 *.handhistory
-reports/
-screenshots/
-generated_reports/
+/reports/
+/screenshots/
+/generated_reports/
 local_exports/
 local_state/
 
