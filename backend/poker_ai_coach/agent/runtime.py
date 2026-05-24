@@ -43,7 +43,7 @@ class HttpxResponsesTransport:
                 "Content-Type": "application/json",
             },
             json=payload,
-            timeout=90.0,
+            timeout=240.0,
         )
         response.raise_for_status()
         return response.json()
@@ -206,30 +206,44 @@ def run_controlled_agent(
             )
         )
 
-    final_response = transport.create_response(
-        {
-            "model": model,
-            "instructions": controlled_agent_instructions(request.mode),
-            "input": [
-                {"role": "user", "content": request.message},
-                {
-                    "role": "user",
-                    "content": (
-                        f"Important: this is a {request.mode} request. "
-                        "Use the provided local tool outputs. Do not ask for more tools."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        "Safe local tool outputs JSON. Use only this evidence.\n"
-                        f"{tool_output_json(tool_outputs)}"
-                    ),
-                },
-            ],
-            "store": True,
-        }
-    )
+    try:
+        final_response = transport.create_response(
+            {
+                "model": model,
+                "instructions": controlled_agent_instructions(request.mode),
+                "input": [
+                    {"role": "user", "content": request.message},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Important: this is a {request.mode} request. "
+                            "Use the provided local tool outputs. Do not ask for more tools."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Safe local tool outputs JSON. Use only this evidence.\n"
+                            f"{tool_output_json(tool_outputs)}"
+                        ),
+                    },
+                ],
+                "store": True,
+            }
+        )
+    except httpx.HTTPError as exc:
+        return AgentChatResponse(
+            ai_enabled=True,
+            ai_configured=True,
+            provider="openai",
+            model=model,
+            session_id=session_id,
+            content="Coach request failed before a final answer was returned.",
+            tool_steps=tool_steps,
+            selected_hand_ids=drill_hand_ids,
+            warnings=[f"OpenAI request failed: {exc.__class__.__name__}."],
+            error="Coach provider request failed.",
+        )
     if final_response.get("id"):
         _SESSION_RESPONSES[session_id] = str(final_response["id"])
 
@@ -246,9 +260,13 @@ def run_controlled_agent(
 
 
 def controlled_tool_plan(request: AgentChatRequest) -> list[tuple[str, dict[str, Any]]]:
+    period_tools: list[tuple[str, dict[str, Any]]] = []
+    if is_week_request(request.message):
+        period_tools = [("get_hm3_period_stats", {"period": "latest_valid_week"})]
     if request.mode in {"leak_finder_deep", "training_initial", "training_followup"}:
         return [
             ("get_database_profile", {}),
+            *period_tools,
             ("get_monthly_hm3_stats", {}),
             ("find_stat_leaks", {"limit": 10}),
             ("get_agent_knowledge", {"topic": "leak_finder"}),
@@ -257,6 +275,7 @@ def controlled_tool_plan(request: AgentChatRequest) -> list[tuple[str, dict[str,
     if request.mode == "study_plan_deep":
         return [
             ("get_database_profile", {}),
+            *period_tools,
             ("get_monthly_hm3_stats", {}),
             ("find_stat_leaks", {"limit": 10}),
             ("get_study_plan_context", {}),
@@ -270,6 +289,7 @@ def controlled_tool_plan(request: AgentChatRequest) -> list[tuple[str, dict[str,
     if request.mode == "leak_finder":
         return [
             ("get_database_profile", {}),
+            *period_tools,
             ("get_hm3_player_stats", {}),
             ("get_hm3_stat_mappings", {}),
             ("get_agent_knowledge", {"topic": "leak_finder"}),
@@ -292,6 +312,7 @@ def controlled_tool_plan(request: AgentChatRequest) -> list[tuple[str, dict[str,
         return [
             ("get_database_profile", {}),
             ("get_hm3_schema_overview", {}),
+            *period_tools,
             ("get_hm3_player_stats", {}),
             ("get_hm3_stat_mappings", {}),
             ("get_agent_knowledge", {"topic": "stats"}),
@@ -307,6 +328,7 @@ def controlled_tool_plan(request: AgentChatRequest) -> list[tuple[str, dict[str,
     tool_plan: list[tuple[str, dict[str, Any]]] = [
         ("get_database_profile", {}),
         ("get_hm3_schema_overview", {}),
+        *period_tools,
         ("get_hm3_player_stats", {}),
         ("get_hm3_stat_mappings", {}),
         ("get_coaching_principles", {}),
@@ -429,6 +451,9 @@ Use only the provided JSON evidence.
 Do not ask for more tools, SQL, screenshots, files, or database upload.
 Mode focus: {mode_focus}
 For overview and stats questions:
+- If get_hm3_period_stats is present, use it as the primary source for the requested
+  week/day/month window.
+- Never present monthly aggregate VPIP/PFR/3Bet as exact weekly stats.
 - The main insight must come from get_hm3_player_stats.stats, insights, or coach_priority.
 - Discuss VPIP/PFR, 3Bet, bb/100, WTSD, W$SD, WWSF, fold-to-3bet, and cbet data first.
 - Treat hand text scans as secondary evidence for selecting hands to review.
@@ -526,6 +551,22 @@ def is_stats_only_request(message: str) -> bool:
     )
 
 
+def is_week_request(message: str) -> bool:
+    lowered = message.lower()
+    markers = [
+        "week",
+        "weekly",
+        "this week",
+        "last week",
+        "7 days",
+        "недел",
+        "эту неделю",
+        "эта неделя",
+        "последние 7",
+    ]
+    return any(marker in lowered for marker in markers)
+
+
 def function_calls_from_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     calls = []
     for item in response.get("output") or []:
@@ -614,6 +655,12 @@ def summarize_tool_output(name: str, output: dict[str, Any]) -> str:
         stats = output.get("stats", {})
         return (
             f"Loaded monthly stats for {output.get('period') or 'unknown'} "
+            f"over {stats.get('total_hands', 0)} hands."
+        )
+    if name == "get_hm3_period_stats":
+        stats = output.get("stats", {})
+        return (
+            f"Loaded period stats for {output.get('date_from')}..{output.get('date_to')} "
             f"over {stats.get('total_hands', 0)} hands."
         )
     if name == "find_stat_leaks":

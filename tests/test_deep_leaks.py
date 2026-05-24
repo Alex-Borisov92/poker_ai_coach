@@ -7,6 +7,7 @@ from poker_ai_coach.reports.deep_leaks import (
     find_stat_leaks,
     get_candidate_hands_for_leak,
     get_hand_details_batch,
+    get_hm3_period_stats,
     get_monthly_hm3_stats,
 )
 
@@ -148,3 +149,18 @@ def test_deep_hand_tools_are_bounded(tmp_path: Path):
     assert len(details["hands"]) == 10
     assert len(analyses["hands"]) == 10
     assert analyses["hands"][0]["hero_actions"]
+
+
+def test_period_stats_uses_latest_valid_week_from_handhistories(tmp_path: Path):
+    database_path = tmp_path / "deep.hmdb"
+    create_deep_db(database_path)
+    settings = Settings(HM3_DB_PATH=database_path, HERO_NAME="hero")
+
+    result = get_hm3_period_stats(settings, "latest_valid_week")
+
+    assert result["connected"] is True
+    assert result["date_from"] == "2026-05-18"
+    assert result["date_to"] == "2026-05-24"
+    assert result["stats"]["total_hands"] == 12
+    assert result["stats"]["hero_text_hands"] == 12
+    assert "monthly" in result["warnings"][0]

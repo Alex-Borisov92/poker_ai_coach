@@ -18,6 +18,7 @@ from poker_ai_coach.reports.deep_leaks import (
     find_stat_leaks,
     get_candidate_hands_for_leak,
     get_hand_details_batch,
+    get_hm3_period_stats,
     get_monthly_hm3_stats,
 )
 from poker_ai_coach.reports.hand_review_queue import (
@@ -73,6 +74,14 @@ def tool_definitions() -> list[dict[str, Any]]:
         function_tool(
             "get_monthly_hm3_stats",
             "Return HM3 aggregate stats for a monthly period or latest available period.",
+            {"period": {"type": "string"}},
+        ),
+        function_tool(
+            "get_hm3_period_stats",
+            (
+                "Return safe period stats from handhistories for latest week/day/month. "
+                "Weekly VPIP/PFR are reported as unavailable if only monthly aggregates exist."
+            ),
             {"period": {"type": "string"}},
         ),
         function_tool(
@@ -217,6 +226,8 @@ def execute_tool(settings: Settings, name: str, arguments: dict[str, Any]) -> di
         return build_hm3_player_stats(settings)
     if name == "get_monthly_hm3_stats":
         return get_monthly_hm3_stats(settings, arguments.get("period"))
+    if name == "get_hm3_period_stats":
+        return get_hm3_period_stats(settings, str(arguments.get("period") or "latest_valid_week"))
     if name == "find_stat_leaks":
         return find_stat_leaks(
             settings,

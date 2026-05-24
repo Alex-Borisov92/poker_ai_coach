@@ -270,6 +270,35 @@ def test_russian_stats_question_uses_aggregate_stats_without_hand_scan(tmp_path:
     assert response.selected_hand_ids == []
 
 
+def test_week_stats_question_uses_period_stats_before_overall_stats(tmp_path: Path):
+    database_path = tmp_path / "agent.hmdb"
+    create_agent_db(database_path)
+    settings = Settings(
+        HM3_DB_PATH=database_path,
+        HERO_NAME="surok_valera",
+        AI_ENABLED=True,
+        OPENAI_API_KEY="test-key",
+        OPENAI_MODEL="gpt-5-mini",
+    )
+    transport = FakeScoutTransport()
+
+    response = run_agent_chat(
+        settings,
+        AgentChatRequest(message="дай овервью по статам за эту неделю"),
+        transport=transport,
+    )
+
+    names = [step.name for step in response.tool_steps]
+
+    assert response.content.startswith("Main insight")
+    assert names[:4] == [
+        "get_database_profile",
+        "get_hm3_schema_overview",
+        "get_hm3_period_stats",
+        "get_hm3_player_stats",
+    ]
+
+
 def test_leak_finder_mode_uses_agent_context_tools(tmp_path: Path):
     database_path = tmp_path / "agent.hmdb"
     create_agent_db(database_path)
