@@ -1,15 +1,15 @@
 {
   "name": "poker_ai_coach",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Local post-session poker AI coach for a microstakes MTT player.",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pytest",
+    "lint": "ruff check .",
+    "format:check": "ruff format --check .",
+    "frontend:check": "npm --prefix frontend run check",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:e2e": "npm --prefix frontend run test:e2e"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "license": "UNLICENSED"
 }

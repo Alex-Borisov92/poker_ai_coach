@@ -1,0 +1,58 @@
+name: Deploy to Yandex VM
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy over SSH
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout for scripts
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.YC_HOST }}" || (echo "YC_HOST is missing" && exit 1)
+          test -n "${{ secrets.YC_USER }}" || (echo "YC_USER is missing" && exit 1)
+          test -n "${{ secrets.YC_SSH_PRIVATE_KEY }}" || (echo "YC_SSH_PRIVATE_KEY is missing" && exit 1)
+
+      - name: Prepare SSH key
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          cat > ~/.ssh/poker_ai_coach_deploy_key <<'KEY'
+          ${{ secrets.YC_SSH_PRIVATE_KEY }}
+          KEY
+          chmod 600 ~/.ssh/poker_ai_coach_deploy_key
+          ssh-keyscan -p "${{ secrets.YC_PORT || '22' }}" "${{ secrets.YC_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy app
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/poker_ai_coach_deploy_key -p "${{ secrets.YC_PORT || '22' }}" "${{ secrets.YC_USER }}@${{ secrets.YC_HOST }}" <<'REMOTE'
+          set -euo pipefail
+          if [ ! -d /opt/poker_ai_coach/.git ]; then
+            sudo rm -rf /opt/poker_ai_coach
+            sudo git clone https://github.com/Alex-Borisov92/poker_ai_coach.git /opt/poker_ai_coach
+          fi
+          cd /opt/poker_ai_coach
+          sudo git fetch --all --tags
+          sudo git checkout "${{ inputs.ref }}"
+          sudo git pull --ff-only || true
+          sudo docker compose up -d --build || sudo docker-compose up -d --build
+          curl -fsS http://127.0.0.1/api/health
+          REMOTE

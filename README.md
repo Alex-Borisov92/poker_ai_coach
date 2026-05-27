@@ -269,6 +269,49 @@ Do not upload a real HM3 `.hmdb` file to a public cloud server unless you have
 made a deliberate privacy decision. The recommended cloud demo mode is app only,
 or app plus sanitized schema snapshot.
 
+## GitHub CI, Releases, And Deploy
+
+GitHub Actions are configured in `.github/workflows/`:
+
+- `CI` runs backend tests, ruff, frontend typecheck, frontend build, Playwright
+  smoke tests, and Docker build smoke on pushes and pull requests.
+- `Docker Release` publishes Docker images to GitHub Container Registry and
+  creates a GitHub release for tags like `v0.1.0`.
+- `Deploy to Yandex VM` is a manual workflow that updates a VM over SSH.
+
+Create a release from local git:
+
+```powershell
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Or run `Docker Release` manually from GitHub Actions with a version input like:
+
+```text
+v0.1.0
+```
+
+Published images:
+
+```text
+ghcr.io/Alex-Borisov92/poker-ai-coach-backend:<version>
+ghcr.io/Alex-Borisov92/poker-ai-coach-web:<version>
+```
+
+Required GitHub repository secrets for manual Yandex deploy:
+
+```text
+YC_HOST
+YC_USER
+YC_SSH_PRIVATE_KEY
+YC_PORT
+```
+
+`YC_PORT` is optional if SSH uses port `22`. Do not store `.env`, API keys, or
+HM3 database files in GitHub secrets unless you have made an explicit privacy
+decision. The safe cloud default is app-only mode without a real HM3 database.
+
 ## Safety Notes
 
 - Use this only for already played historical hands.
