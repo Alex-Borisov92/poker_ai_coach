@@ -17,8 +17,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/poker-ai-coach-backend
-  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/poker-ai-coach-web
 
 jobs:
   publish:
@@ -37,8 +35,10 @@ jobs:
           else
             VERSION="${GITHUB_REF_NAME}"
           fi
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -57,9 +57,9 @@ jobs:
           file: Dockerfile.backend
           push: true
           tags: |
-            ${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.short_sha }}
-            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-backend:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-backend:${{ steps.version.outputs.short_sha }}
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-backend:latest
 
       - name: Build and push web image
         uses: docker/build-push-action@v6
@@ -70,9 +70,9 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=
           tags: |
-            ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.short_sha }}
-            ${{ env.WEB_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-web:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-web:${{ steps.version.outputs.short_sha }}
+            ${{ env.REGISTRY }}/${{ steps.version.outputs.owner }}/poker-ai-coach-web:latest
 
       - name: Create or update GitHub release
         uses: softprops/action-gh-release@v2

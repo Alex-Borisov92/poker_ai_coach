@@ -295,8 +295,8 @@ v0.1.0
 Published images:
 
 ```text
-ghcr.io/Alex-Borisov92/poker-ai-coach-backend:<version>
-ghcr.io/Alex-Borisov92/poker-ai-coach-web:<version>
+ghcr.io/alex-borisov92/poker-ai-coach-backend:<version>
+ghcr.io/alex-borisov92/poker-ai-coach-web:<version>
 ```
 
 Required GitHub repository secrets for manual Yandex deploy:
