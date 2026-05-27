@@ -11,7 +11,6 @@ services:
       AI_ENABLED: "false"
       OPENAI_API_KEY: ""
       OPENAI_MODEL: ""
-      HM3_DB_PATH: ""
     volumes:
       - poker_ai_coach_state:/app/local_state
       - poker_ai_coach_exports:/app/local_exports
