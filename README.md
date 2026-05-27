@@ -239,6 +239,36 @@ cd frontend
 npm run test:e2e
 ```
 
+## Docker Deployment
+
+The Docker setup is meant for a safe cloud demo or private server deployment.
+It does not copy your `.env` file or HM3 `.hmdb` database.
+
+Build and run locally:
+
+```powershell
+docker compose up --build -d
+```
+
+Open:
+
+```text
+http://127.0.0.1
+```
+
+Cloud defaults:
+
+- Backend runs inside Docker on port `8000`.
+- Nginx serves the frontend on port `80`.
+- Nginx proxies `/api/*` to the backend container.
+- `AI_ENABLED=false`.
+- `HM3_DB_PATH` is empty.
+- Local app state is stored in Docker volumes, not in git.
+
+Do not upload a real HM3 `.hmdb` file to a public cloud server unless you have
+made a deliberate privacy decision. The recommended cloud demo mode is app only,
+or app plus sanitized schema snapshot.
+
 ## Safety Notes
 
 - Use this only for already played historical hands.

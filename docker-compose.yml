@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      HERO_NAME: surok_valera
+      AI_ENABLED: "false"
+      OPENAI_API_KEY: ""
+      OPENAI_MODEL: ""
+      HM3_DB_PATH: ""
+    volumes:
+      - poker_ai_coach_state:/app/local_state
+      - poker_ai_coach_exports:/app/local_exports
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  poker_ai_coach_state:
+  poker_ai_coach_exports:

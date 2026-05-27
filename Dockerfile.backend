@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+ENV APP_HOST=0.0.0.0
+ENV APP_PORT=8000
+ENV AI_ENABLED=false
+ENV HERO_NAME=surok_valera
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY COACHING_PRINCIPLES.MD AGENTS.MD DEVELOPMENTS.MD ./
+COPY backend ./backend
+
+RUN pip install --no-cache-dir .
+
+RUN useradd --create-home appuser \
+    && mkdir -p /app/local_state /app/local_exports \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "poker_ai_coach.main:app", "--app-dir", "backend", "--host", "0.0.0.0", "--port", "8000"]
